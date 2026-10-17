@@ -1,0 +1,14 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: audit
+      POSTGRES_PASSWORD: audit
+      POSTGRES_DB: audit_dev
+    ports:
+      - "5460:5432"
+    volumes:
+      - audit_pg_data:/var/lib/postgresql/data
+
+volumes:
+  audit_pg_data:
