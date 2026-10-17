@@ -59,10 +59,18 @@ class ImportPreviewResponse(BaseModel):
     sample_rows: list[ImportPreviewRow]
 
 
+class AutoRunControlResultOut(BaseModel):
+    control_code: str
+    status: str  # "completed" | "skipped"
+    finding_count: int | None = None
+    skip_reason: str | None = None
+
+
 class CommitImportResponse(BaseModel):
     dataset_version_id: uuid.UUID
     version_number: int
     row_count: int
+    auto_run_control_results: list[AutoRunControlResultOut] = []
 
 
 class RunControlRequest(BaseModel):
@@ -169,6 +177,117 @@ class EngagementReport(BaseModel):
     control_runs: list[ReportControlRunOut]
     findings: list[ReportFindingOut]
     limitations: list[str]
+
+
+class FindingsByControlOut(BaseModel):
+    control_code: str
+    control_name: str
+    finding_count: int
+
+
+class SupplierSummaryOut(BaseModel):
+    supplier_name: str
+    transaction_count: int
+    total_amount_by_currency: dict[str, str]
+    flagged_transaction_count: int
+
+
+class SupplierRiskOut(BaseModel):
+    supplier_name: str
+    risk_score: int
+    controls_hit: list[str]
+    total_finding_count: int
+    severity_breakdown: dict[str, int]
+
+
+class EngagementAnalytics(BaseModel):
+    dataset_version_id: uuid.UUID | None
+    dataset_version_number: int | None
+    findings_by_severity: dict[str, int]
+    findings_by_status: dict[str, int]
+    findings_by_control: list[FindingsByControlOut]
+    supplier_summary: list[SupplierSummaryOut]
+    supplier_risk_scores: list[SupplierRiskOut] = []
+
+
+class ControlConfigurationIn(BaseModel):
+    enabled: bool
+    parameters: dict | None = None
+
+
+class ControlConfigurationOut(BaseModel):
+    control_code: str
+    control_name: str
+    description: str
+    enabled: bool
+    parameters: dict
+    required_parameters_hint: list[str]
+    updated_at: datetime | None
+
+
+class CommitExternalImportResponse(BaseModel):
+    external_record_batch_id: uuid.UUID
+    version_number: int
+    row_count: int
+
+
+class ExternalRecordBatchOut(BaseModel):
+    id: uuid.UUID
+    source_label: str
+    version_number: int
+    committed_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ExternalRecordOut(BaseModel):
+    id: uuid.UUID
+    source_row_number: int
+    counterparty_name: str | None
+    reference: str | None
+    currency: str | None
+    amount: Decimal | None
+    transaction_date: date | None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ReconciliationRunRequest(BaseModel):
+    dataset_version_id: uuid.UUID
+    external_record_batch_id: uuid.UUID
+    method: str = "exact_match"
+    parameters: dict | None = None
+
+
+class ReconciliationRunOut(BaseModel):
+    id: uuid.UUID
+    method: str
+    status: str
+    matched_count: int
+    unmatched_transaction_count: int
+    unmatched_external_count: int
+    parameters: dict
+    started_at: datetime
+    finished_at: datetime | None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ReconciliationMatchOut(BaseModel):
+    id: uuid.UUID
+    match_status: str
+    match_basis: str | None
+    transaction_record: TransactionRecordOut | None
+    external_record: ExternalRecordOut | None
+    created_at: datetime
+
+
+class AuditEventOut(BaseModel):
+    id: uuid.UUID
+    event_type: str
+    actor_email: str | None
+    payload: dict
+    created_at: datetime
 
 
 class InvestigationRunOut(BaseModel):

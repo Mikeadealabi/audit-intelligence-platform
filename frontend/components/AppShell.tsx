@@ -4,17 +4,19 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useParams, useRouter } from "next/navigation";
 import { clearToken } from "@/lib/api";
-import { ShieldIcon, GridIcon, UploadIcon, DocIcon, FileSearchIcon } from "./icons";
+import { ShieldIcon, GridIcon, UploadIcon, DocIcon, FileSearchIcon, ActivityIcon, BuildingIcon } from "./icons";
+import ThemeToggle from "./ThemeToggle";
 
 interface AppShellProps {
   title: string;
   eyebrow?: string;
+  icon?: ReactNode;
   actions?: ReactNode;
   narrow?: boolean;
   children: ReactNode;
 }
 
-export default function AppShell({ title, eyebrow, actions, narrow, children }: AppShellProps) {
+export default function AppShell({ title, eyebrow, icon, actions, narrow, children }: AppShellProps) {
   const pathname = usePathname() ?? "";
   const router = useRouter();
   const params = useParams<{ id?: string }>();
@@ -64,6 +66,18 @@ export default function AppShell({ title, eyebrow, actions, narrow, children }: 
               <FileSearchIcon size={16} /> Findings
             </Link>
             <Link
+              href={`${base}/suppliers`}
+              className={`sidebar-link ${pathname === `${base}/suppliers` ? "active" : ""}`}
+            >
+              <BuildingIcon size={16} /> Suppliers
+            </Link>
+            <Link
+              href={`${base}/activity`}
+              className={`sidebar-link ${pathname === `${base}/activity` ? "active" : ""}`}
+            >
+              <ActivityIcon size={16} /> Activity
+            </Link>
+            <Link
               href={`${base}/reports`}
               className={`sidebar-link ${pathname === `${base}/reports` ? "active" : ""}`}
             >
@@ -73,6 +87,7 @@ export default function AppShell({ title, eyebrow, actions, narrow, children }: 
         )}
 
         <div className="sidebar-footer">
+          <ThemeToggle />
           <button className="sidebar-signout" onClick={signOut}>
             Sign out
           </button>
@@ -82,6 +97,7 @@ export default function AppShell({ title, eyebrow, actions, narrow, children }: 
       <div className="app-main">
         <header className="app-topbar">
           <div className="app-topbar-title">
+            {icon && <div className="app-topbar-icon">{icon}</div>}
             <div>
               {eyebrow && <div className="app-topbar-eyebrow">{eyebrow}</div>}
               <h1 style={{ fontSize: 21, marginBottom: 0 }}>{title}</h1>

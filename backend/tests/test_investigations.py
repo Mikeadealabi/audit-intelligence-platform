@@ -86,11 +86,15 @@ def _finding_with_evidence(client, headers) -> tuple[str, str, list[str]]:
     return engagement_id, finding["id"], finding["evidence_record_ids"]
 
 
-def test_investigation_returns_503_when_not_configured(client, make_principal):
+def test_investigation_returns_503_when_not_configured(client, make_principal, monkeypatch):
+    # Force "unconfigured" regardless of what a developer's local backend/.env
+    # happens to have set (e.g. a real ANTHROPIC_API_KEY for manual testing) —
+    # this test must not depend on real environment state.
+    monkeypatch.setattr(settings, "anthropic_api_key", None)
+    monkeypatch.setattr(settings, "anthropic_model_id", None)
+
     headers, _, _ = make_principal()
     engagement_id, finding_id, _ = _finding_with_evidence(client, headers)
-
-    assert settings.anthropic_api_key is None  # sanity check on the test environment
 
     resp = client.post(f"/engagements/{engagement_id}/findings/{finding_id}/investigations", headers=headers)
     assert resp.status_code == 503

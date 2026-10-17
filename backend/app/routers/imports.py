@@ -10,8 +10,9 @@ from app.db import get_db
 from app.deps import Principal, get_current_principal
 from app.models import ImportRun, SourceFile
 from app.routers.engagements import get_engagement_or_404
-from app.schemas import CommitImportResponse, ImportPreviewResponse, ImportPreviewRow
+from app.schemas import AutoRunControlResultOut, CommitImportResponse, ImportPreviewResponse, ImportPreviewRow
 from app.services.audit import record_audit_event
+from app.services.control_automation import auto_run_configured_controls
 from app.services.csv_parser import CsvValidationError, parse_csv
 from app.services.dataset_versioning import commit_import_run, compute_sha256, source_file_storage_key
 from app.storage.local import LocalFilesystemStorage
@@ -197,10 +198,31 @@ def commit_import(
             "row_count": len(parse_result.valid_rows),
         },
     )
+
+    # Auto-run any controls this engagement has configured for dataset-commit
+    # triggering, in the same transaction as the commit itself. See
+    # app/services/control_automation.py.
+    auto_run_results = auto_run_configured_controls(
+        db,
+        tenant_id=principal.tenant_id,
+        user_id=principal.user_id,
+        engagement=engagement,
+        dataset_version=dataset_version,
+    )
+
     db.commit()
 
     return CommitImportResponse(
         dataset_version_id=dataset_version.id,
         version_number=dataset_version.version_number,
         row_count=len(parse_result.valid_rows),
+        auto_run_control_results=[
+            AutoRunControlResultOut(
+                control_code=r.control_code,
+                status=r.status,
+                finding_count=r.finding_count,
+                skip_reason=r.skip_reason,
+            )
+            for r in auto_run_results
+        ],
     )

@@ -61,6 +61,52 @@
   --sidebar-w: 248px;
 }
 
+:root[data-theme="dark"] {
+  --ink-950: #f5f6f9;
+  --ink-900: #e8ebf1;
+  --ink-800: #d2d8e4;
+  --ink-700: #aab3c7;
+  --ink-600: #818da8;
+  --ink-500: #7079a0;
+  --ink-400: #5b6680;
+  --ink-300: #384258;
+  --ink-200: #262e42;
+  --ink-100: #1c2334;
+  --ink-50: #161c29;
+
+  --paper: #0b0f17;
+  --surface: #11151f;
+  --surface-sunken: #161c29;
+
+  --accent-50: #171433;
+  --accent-100: #221c4d;
+
+  --severity-high-bg: #2e1419;
+  --severity-medium-bg: #2b1d0c;
+  --severity-low-bg: #112b1a;
+
+  --status-open-bg: #221c4d;
+  --status-confirmed-bg: #2e1419;
+  --status-false_positive-bg: #112b1a;
+  --status-needs_more_evidence-bg: #2b1d0c;
+
+  --danger-bg: #2e1419;
+  --success-bg: #112b1a;
+  --ai-bg: #171433;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px -4px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 16px 40px -12px rgba(0, 0, 0, 0.55);
+}
+
+:root[data-theme="dark"] .app-sidebar {
+  background: linear-gradient(185deg, #000000, var(--ink-50) 60%);
+}
+
+:root[data-theme="dark"] .login-hero {
+  background: linear-gradient(175deg, #000000, var(--ink-50) 75%);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -216,6 +262,9 @@ code,
   margin-top: auto;
   padding-top: 14px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .sidebar-user {
@@ -285,8 +334,20 @@ code,
 
 .app-topbar-title {
   display: flex;
-  align-items: baseline;
-  gap: 10px;
+  align-items: center;
+  gap: 13px;
+}
+
+.app-topbar-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: var(--accent-50);
+  color: var(--accent-600);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .app-topbar-eyebrow {
@@ -333,6 +394,17 @@ code,
 
 .card.flush .card-header {
   padding: 18px 22px 0;
+}
+
+.card-link {
+  transition: border-color 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease;
+}
+
+.card-link:hover {
+  border-color: var(--ink-300);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+  text-decoration: none;
 }
 
 /* ---------- Buttons ---------- */
@@ -479,6 +551,22 @@ tbody tr:hover {
   background: var(--surface-sunken);
 }
 
+.th-sort {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.th-sort:hover {
+  color: var(--ink-800);
+}
+
 /* ---------- Badges ---------- */
 
 .badge {
@@ -562,6 +650,31 @@ tbody tr:hover {
   border-radius: var(--radius-md);
   padding: 16px 18px;
   box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.stat-card-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  color: var(--ink-400);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stat-card.danger .stat-value {
+  color: var(--severity-high);
+}
+
+.stat-card.danger .stat-card-icon {
+  background: var(--severity-high-bg);
+  color: var(--severity-high);
 }
 
 .stat-card .stat-label {
@@ -666,6 +779,15 @@ tbody tr:hover {
   background: var(--ink-950);
   border-color: var(--ink-950);
   color: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.page-lede {
+  font-size: 13.5px;
+  color: var(--ink-600);
+  max-width: 640px;
+  margin: -4px 0 20px;
+  line-height: 1.55;
 }
 
 .evidence-chip {
@@ -681,18 +803,77 @@ tbody tr:hover {
 
 .finding-card {
   border: 1px solid var(--ink-100);
+  border-left: 4px solid var(--ink-200);
   border-radius: var(--radius-md);
-  padding: 16px 18px;
+  padding: 16px 18px 16px 16px;
   margin-bottom: 10px;
-  transition: border-color 0.12s ease, box-shadow 0.12s ease;
-  display: block;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease;
+  display: flex;
+  gap: 14px;
   color: inherit;
+  background: var(--surface);
 }
 
 .finding-card:hover {
-  border-color: var(--ink-300);
-  box-shadow: var(--shadow-sm);
+  border-left-color: var(--ink-400);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
   text-decoration: none;
+}
+
+.finding-card.severity-high {
+  border-left-color: var(--severity-high);
+}
+
+.finding-card.severity-high:hover {
+  border-left-color: var(--severity-high);
+}
+
+.finding-card.severity-medium {
+  border-left-color: var(--severity-medium);
+}
+
+.finding-card.severity-medium:hover {
+  border-left-color: var(--severity-medium);
+}
+
+.finding-card.severity-low {
+  border-left-color: var(--severity-low);
+}
+
+.finding-card.severity-low:hover {
+  border-left-color: var(--severity-low);
+}
+
+.finding-card-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.finding-card-icon.severity-high {
+  background: var(--severity-high-bg);
+  color: var(--severity-high);
+}
+
+.finding-card-icon.severity-medium {
+  background: var(--severity-medium-bg);
+  color: var(--severity-medium);
+}
+
+.finding-card-icon.severity-low {
+  background: var(--severity-low-bg);
+  color: var(--severity-low);
+}
+
+.finding-card-body {
+  flex: 1;
+  min-width: 0;
 }
 
 .finding-card-top {
@@ -773,6 +954,48 @@ tbody tr:hover {
   100% {
     background-position: 0 50%;
   }
+}
+
+.activity-timeline {
+  display: flex;
+  flex-direction: column;
+}
+
+.activity-item {
+  display: flex;
+  gap: 14px;
+  padding: 2px 0 20px;
+  position: relative;
+}
+
+.activity-item::before {
+  content: "";
+  position: absolute;
+  left: 4.5px;
+  top: 14px;
+  bottom: 0;
+  width: 1px;
+  background: var(--ink-100);
+}
+
+.activity-item:last-child::before {
+  display: none;
+}
+
+.activity-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent-500);
+  flex-shrink: 0;
+  margin-top: 4px;
+  box-shadow: 0 0 0 3px var(--accent-100);
+}
+
+.activity-body {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 2px;
 }
 
 .login-page {

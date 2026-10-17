@@ -5,7 +5,13 @@ import { useParams, useRouter } from "next/navigation";
 import { apiGet, getToken, ApiError, type EngagementReport } from "@/lib/api";
 import AppShell from "@/components/AppShell";
 import EmptyState from "@/components/EmptyState";
-import { AlertIcon, DocIcon, SparkleIcon } from "@/components/icons";
+import { AlertIcon, DocIcon, SparkleIcon, ClockIcon, CheckCircleIcon } from "@/components/icons";
+
+const SEVERITY_ICON: Record<string, typeof AlertIcon> = {
+  high: AlertIcon,
+  medium: ClockIcon,
+  low: CheckCircleIcon,
+};
 
 export default function ReportPage() {
   const { id } = useParams<{ id: string }>();
@@ -27,6 +33,7 @@ export default function ReportPage() {
     <AppShell
       title="Engagement report"
       eyebrow="Evidence-backed export"
+      icon={<DocIcon size={17} />}
       actions={
         report && (
           <button className="btn secondary" onClick={() => window.print()}>
@@ -127,35 +134,53 @@ export default function ReportPage() {
             {report.findings.length === 0 ? (
               <EmptyState icon={<DocIcon size={20} />} title="No findings in this engagement yet" />
             ) : (
-              report.findings.map((f) => (
-                <div key={f.id} className="finding-card" style={{ cursor: "default" }}>
-                  <div className="finding-card-top">
-                    <span className={`badge severity-${f.severity}`}>{f.severity}</span>
-                    <span className={`badge status-${f.status}`}>{f.status.replace(/_/g, " ")}</span>
-                    <span className="muted" style={{ marginLeft: "auto", fontSize: 11.5 }}>
-                      {f.control_code} v{f.control_version} · dataset #{f.dataset_version_number}
-                    </span>
+              report.findings.map((f) => {
+                const SeverityIcon = SEVERITY_ICON[f.severity] ?? AlertIcon;
+                return (
+                  <div key={f.id} className={`finding-card severity-${f.severity}`} style={{ cursor: "default" }}>
+                    <div className={`finding-card-icon severity-${f.severity}`}>
+                      <SeverityIcon size={16} />
+                    </div>
+                    <div className="finding-card-body">
+                      <div className="finding-card-top">
+                        <span className={`badge severity-${f.severity}`}>{f.severity}</span>
+                        <span className={`badge status-${f.status}`}>{f.status.replace(/_/g, " ")}</span>
+                        <span className="muted" style={{ marginLeft: "auto", fontSize: 11.5 }}>
+                          {f.control_code} v{f.control_version} · dataset #{f.dataset_version_number}
+                        </span>
+                      </div>
+                      <p style={{ margin: "0 0 8px", fontSize: 13.5 }}>{f.summary}</p>
+
+                      {f.disposition && (
+                        <div style={{ fontSize: 12.5, color: "var(--ink-600)", marginBottom: 6 }}>
+                          <strong>Reviewer decision:</strong> {f.disposition.status.replace(/_/g, " ")} —{" "}
+                          {f.disposition.rationale}{" "}
+                          <span className="muted">
+                            ({new Date(f.disposition.recorded_at).toLocaleDateString()})
+                          </span>
+                        </div>
+                      )}
+
+                      {f.latest_investigation?.result && (
+                        <div
+                          style={{
+                            fontSize: 12.5,
+                            color: "var(--ink-600)",
+                            display: "flex",
+                            gap: 6,
+                            alignItems: "flex-start",
+                          }}
+                        >
+                          <SparkleIcon size={13} style={{ color: "var(--ai)", marginTop: 1, flexShrink: 0 }} />
+                          <span>
+                            <strong>AI investigation summary:</strong> {f.latest_investigation.result.summary}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <p style={{ margin: "0 0 8px", fontSize: 13.5 }}>{f.summary}</p>
-
-                  {f.disposition && (
-                    <div style={{ fontSize: 12.5, color: "var(--ink-600)", marginBottom: 6 }}>
-                      <strong>Reviewer decision:</strong> {f.disposition.status.replace(/_/g, " ")} —{" "}
-                      {f.disposition.rationale}{" "}
-                      <span className="muted">({new Date(f.disposition.recorded_at).toLocaleDateString()})</span>
-                    </div>
-                  )}
-
-                  {f.latest_investigation?.result && (
-                    <div style={{ fontSize: 12.5, color: "var(--ink-600)", display: "flex", gap: 6, alignItems: "flex-start" }}>
-                      <SparkleIcon size={13} style={{ color: "var(--ai)", marginTop: 1, flexShrink: 0 }} />
-                      <span>
-                        <strong>AI investigation summary:</strong> {f.latest_investigation.result.summary}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </>

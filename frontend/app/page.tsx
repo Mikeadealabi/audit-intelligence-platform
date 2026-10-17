@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiPost, setToken, ApiError } from "@/lib/api";
 import { ShieldIcon, AlertIcon, CheckCircleIcon, LockIcon, FileSearchIcon } from "@/components/icons";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -90,7 +91,10 @@ export default function LoginPage() {
         </p>
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 32 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 32, position: "relative" }}>
+        <div style={{ position: "absolute", top: 18, right: 18 }}>
+          <ThemeToggle variant="ghost" />
+        </div>
         <div style={{ width: "100%", maxWidth: 380 }}>
           <h2 style={{ fontSize: 22, marginBottom: 4 }}>
             {mode === "login" ? "Welcome back" : "Create your firm workspace"}

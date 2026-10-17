@@ -68,6 +68,9 @@ def commit_import_run(
                 currency=row.mapped.get("currency"),
                 amount=row.mapped.get("amount"),
                 transaction_date=row.mapped.get("transaction_date"),
+                tax_category=row.mapped.get("tax_category"),
+                recorded_vat_amount=row.mapped.get("recorded_vat_amount"),
+                recorded_wht_amount=row.mapped.get("recorded_wht_amount"),
                 raw_row=_json_safe(row.mapped),
             )
         )

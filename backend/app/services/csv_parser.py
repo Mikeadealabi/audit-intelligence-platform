@@ -12,6 +12,13 @@ REQUIRED_CANONICAL_FIELDS = (
     "transaction_date",
 )
 
+# Only promoted to a typed column/finding input when the caller actually maps a
+# source column to them. Absent mapping -> None, no error. A mapped column that
+# fails to parse IS a row error, same as a required field — claiming to supply a
+# value and then being unparseable is not the same as not supplying one at all.
+OPTIONAL_CANONICAL_FIELDS = ("tax_category", "recorded_vat_amount", "recorded_wht_amount")
+_OPTIONAL_DECIMAL_FIELDS = ("recorded_vat_amount", "recorded_wht_amount")
+
 _DATE_FORMATS = ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y")
 
 
@@ -122,6 +129,20 @@ def parse_csv(
                 if raw_value == "":
                     errors.append(f"{canonical_field}: required field is empty")
                 mapped[canonical_field] = raw_value or None
+
+        for canonical_field in OPTIONAL_CANONICAL_FIELDS:
+            source_col = column_mapping.get(canonical_field)
+            raw_value = (raw_row.get(source_col) or "").strip() if source_col else ""
+
+            if raw_value == "":
+                mapped[canonical_field] = None
+            elif canonical_field in _OPTIONAL_DECIMAL_FIELDS:
+                parsed_amount = _parse_amount(raw_value)
+                if parsed_amount is None:
+                    errors.append(f"{canonical_field}: could not parse '{raw_value}' as a decimal amount")
+                mapped[canonical_field] = parsed_amount
+            else:
+                mapped[canonical_field] = raw_value
 
         rows.append(ParsedRow(row_number=row_number, mapped=mapped, errors=errors))
 

@@ -80,6 +80,10 @@ class ImportRun(Base):
     engagement_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("engagement.id"), index=True)
     source_file_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("source_file.id"))
     column_mapping: Mapped[dict] = mapped_column(JSON)
+    # Only used by the external-record (reconciliation) import flow — a free-text
+    # caller-supplied label, never a real gateway/ERP connector identity. Null for
+    # the transaction-record import flow.
+    source_label: Mapped[str | None] = mapped_column(String(200), nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="pending")
     row_count: Mapped[int] = mapped_column(default=0)
     error_count: Mapped[int] = mapped_column(default=0)
@@ -116,7 +120,96 @@ class TransactionRecord(Base):
     currency: Mapped[str | None] = mapped_column(String(10), nullable=True)
     amount: Mapped[Decimal | None] = mapped_column(Numeric(18, 2), nullable=True)
     transaction_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # Optional tax fields — only populated when the source file actually maps a
+    # column to them. Never computed or filled in by this platform; see
+    # tax_calculation_variance in docs/control-library.md.
+    tax_category: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    recorded_vat_amount: Mapped[Decimal | None] = mapped_column(Numeric(18, 2), nullable=True)
+    recorded_wht_amount: Mapped[Decimal | None] = mapped_column(Numeric(18, 2), nullable=True)
     raw_row: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+
+
+class ExternalRecordBatch(Base):
+    """The second, independently-sourced side of a reconciliation — e.g. a bank or
+    payment-gateway statement, uploaded and versioned the same way transaction_record
+    is (immutable, hashed). `source_label` is a free-text caller-supplied label
+    ("GTBank NGN statement — Jan 2026"), never a real gateway/ERP connector identity —
+    no such connector exists yet, see docs/reconciliation.md."""
+
+    __tablename__ = "external_record_batch"
+    __table_args__ = (UniqueConstraint("import_run_id", name="uq_external_record_batch_import_run"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tenant.id"), index=True)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("engagement.id"), index=True)
+    import_run_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("import_run.id"))
+    source_label: Mapped[str] = mapped_column(String(200))
+    version_number: Mapped[int] = mapped_column()
+    source_file_sha256: Mapped[str] = mapped_column(String(64))
+    mapping_snapshot: Mapped[dict] = mapped_column(JSON)
+    committed_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("app_user.id"))
+    committed_at: Mapped[datetime] = mapped_column(default=_now)
+
+
+class ExternalRecord(Base):
+    __tablename__ = "external_record"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tenant.id"), index=True)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("engagement.id"), index=True)
+    external_record_batch_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("external_record_batch.id"), index=True)
+    source_row_number: Mapped[int] = mapped_column()
+    counterparty_name: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    reference: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    currency: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    amount: Mapped[Decimal | None] = mapped_column(Numeric(18, 2), nullable=True)
+    transaction_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    raw_row: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+
+
+class ReconciliationRun(Base):
+    """One execution of matching a dataset_version's transaction_records against an
+    external_record_batch. `method` and `parameters` exist now so a future
+    tolerance-based/fuzzy method can be added without a schema change — only
+    "exact_match" has an implementation today; see docs/reconciliation.md."""
+
+    __tablename__ = "reconciliation_run"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tenant.id"), index=True)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("engagement.id"), index=True)
+    dataset_version_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("dataset_version.id"))
+    external_record_batch_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("external_record_batch.id"))
+    method: Mapped[str] = mapped_column(String(50), default="exact_match")
+    status: Mapped[str] = mapped_column(String(20), default="completed")
+    started_at: Mapped[datetime] = mapped_column(default=_now)
+    finished_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    run_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("app_user.id"))
+    matched_count: Mapped[int] = mapped_column(default=0)
+    unmatched_transaction_count: Mapped[int] = mapped_column(default=0)
+    unmatched_external_count: Mapped[int] = mapped_column(default=0)
+    parameters: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
+class ReconciliationMatch(Base):
+    """One outcome row per transaction_record and/or external_record considered by
+    a reconciliation_run: a matched pair (both FKs set), or a one-sided unmatched
+    record (exactly one FK set). `match_basis` documents *why* — e.g.
+    "exact:amount+currency+reference" or "ambiguous_duplicate_key" — so a reviewer
+    never has to guess why something wasn't paired."""
+
+    __tablename__ = "reconciliation_match"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tenant.id"), index=True)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("engagement.id"), index=True)
+    reconciliation_run_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("reconciliation_run.id"), index=True)
+    transaction_record_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("transaction_record.id"), nullable=True)
+    external_record_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("external_record.id"), nullable=True)
+    match_status: Mapped[str] = mapped_column(String(30))
+    match_basis: Mapped[str | None] = mapped_column(String(100), nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=_now)
 
 
@@ -191,6 +284,27 @@ class InvestigationRun(Base):
     tool_call_log: Mapped[list] = mapped_column(JSON, default=list)
     token_usage: Mapped[dict] = mapped_column(JSON, default=dict)
     error_message: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+
+
+class ControlConfiguration(Base):
+    """Per-engagement, per-control saved settings: whether this control should
+    auto-run every time a dataset version is committed, and (for controls that
+    require them) the parameters to run it with. See
+    app/services/control_automation.py and docs/control-library.md."""
+
+    __tablename__ = "control_configuration"
+    __table_args__ = (
+        UniqueConstraint("engagement_id", "control_code", name="uq_control_configuration_engagement_control"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tenant.id"), index=True)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("engagement.id"), index=True)
+    control_code: Mapped[str] = mapped_column(String(100))
+    enabled: Mapped[bool] = mapped_column(default=False)
+    parameters: Mapped[dict] = mapped_column(JSON, default=dict)
+    updated_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("app_user.id"))
+    updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
 
 
 class AuditEvent(Base):

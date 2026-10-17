@@ -38,9 +38,12 @@ Unique on `(tenant_id, user_id)`.
 The uploaded file is written once, hashed, and never overwritten.
 
 ### import_run
-`id, tenant_id, engagement_id, source_file_id -> source_file, column_mapping (JSON), status (pending|previewed|committed|rejected), row_count, error_count, created_by, created_at`
+`id, tenant_id, engagement_id, source_file_id -> source_file, column_mapping (JSON), source_label (nullable), status (pending|previewed|committed|rejected), row_count, error_count, created_by, created_at`
 `column_mapping` records exactly which source column fed which canonical field —
-required to reproduce a finding later.
+required to reproduce a finding later. `source_label` is only used by the
+external-record (reconciliation) import flow — a free-text caller-supplied label,
+never a real connector identity; null for the transaction-record import flow. See
+`docs/reconciliation.md`.
 
 ### dataset_version
 `id, tenant_id, engagement_id, import_run_id -> import_run (unique), version_number, source_file_sha256, mapping_snapshot (JSON), committed_by, committed_at`
@@ -49,9 +52,38 @@ endpoint exists for this table. `version_number` is per-engagement and monotonic
 increasing.
 
 ### transaction_record
-`id, tenant_id, engagement_id, dataset_version_id -> dataset_version, source_row_number, supplier_name, invoice_reference, currency, amount (NUMERIC 18,2), transaction_date, raw_row (JSON), created_at`
+`id, tenant_id, engagement_id, dataset_version_id -> dataset_version, source_row_number, supplier_name, invoice_reference, currency, amount (NUMERIC 18,2), transaction_date, tax_category (nullable), recorded_vat_amount (NUMERIC 18,2, nullable), recorded_wht_amount (NUMERIC 18,2, nullable), raw_row (JSON), created_at`
 `raw_row` keeps the original mapped values for provenance even though only a subset
-is promoted to typed columns in this slice.
+is promoted to typed columns in this slice. The three tax fields are **optional** —
+`NULL` unless the source file's column mapping actually maps a column to them (see
+`app/services/csv_parser.py::OPTIONAL_CANONICAL_FIELDS`); this platform never
+computes or fills in a tax amount itself, only compares a recorded one against an
+expected one in `tax_calculation_variance` (`docs/control-library.md`).
+
+### external_record_batch
+`id, tenant_id, engagement_id, import_run_id -> import_run (unique), source_label, version_number, source_file_sha256, mapping_snapshot (JSON), committed_by, committed_at`
+The reconciliation subsystem's second, independently-sourced data source — the
+external-record mirror of `dataset_version`. `version_number` is its own
+per-engagement sequence, independent of `dataset_version.version_number`. See
+`docs/reconciliation.md`.
+
+### external_record
+`id, tenant_id, engagement_id, external_record_batch_id -> external_record_batch, source_row_number, counterparty_name (nullable), reference (nullable), currency (nullable), amount (NUMERIC 18,2, nullable), transaction_date (nullable), raw_row (JSON), created_at`
+The external-record mirror of `transaction_record`. `reference` is matched
+against `transaction_record.invoice_reference` during reconciliation.
+
+### reconciliation_run
+`id, tenant_id, engagement_id, dataset_version_id -> dataset_version, external_record_batch_id -> external_record_batch, method, status, started_at, finished_at, run_by, matched_count, unmatched_transaction_count, unmatched_external_count, parameters (JSON)`
+One execution of matching a `dataset_version` against an `external_record_batch`.
+`method` and `parameters` exist so a future tolerance-based/fuzzy method can be
+added without a schema change — only `"exact_match"` has an implementation
+today. See `docs/reconciliation.md`.
+
+### reconciliation_match
+`id, tenant_id, engagement_id, reconciliation_run_id -> reconciliation_run, transaction_record_id (nullable), external_record_id (nullable), match_status (matched|unmatched_transaction|unmatched_external), match_basis (nullable), created_at`
+One row per outcome: a matched pair (both FKs set) or a one-sided unmatched
+record (exactly one FK set). `match_basis` always explains why — see
+`docs/reconciliation.md`.
 
 ### control_definition
 `id, code (unique, e.g. "duplicate_invoice_candidates"), name, description, created_at`
@@ -82,6 +114,14 @@ itself an `audit_event`.
 `docs/claude-tool-contract.md`) — null until `status = "completed"`. `tool_call_log`
 is a redacted record of every tool call made (name, arguments, a safe summary, not
 full record payloads). See `docs/claude-tool-contract.md` for the full contract.
+
+### control_configuration
+`id, tenant_id, engagement_id -> engagement, control_code, enabled, parameters (JSON), updated_by -> app_user, updated_at`
+Unique on `(engagement_id, control_code)`. Drives auto-run-on-commit (see
+`app/services/control_automation.py` and `docs/control-library.md`) — one row per
+control a firm has opted into automating for a given engagement, with whatever
+`parameters` that control needs stored the same way a manual `control_run.parameters`
+is. Changing it is audited (`control_configuration.updated`).
 
 ### audit_event
 `id, tenant_id, engagement_id (nullable), actor_user_id (nullable for system events), event_type, payload (JSON, redacted — see below), created_at`

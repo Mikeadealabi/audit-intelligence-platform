@@ -55,6 +55,7 @@ export default function EngagementsPage() {
     <AppShell
       title="Engagements"
       eyebrow="Workspace"
+      icon={<GridIcon size={17} />}
       actions={
         <button className="btn primary" onClick={() => setShowForm((v) => !v)}>
           {showForm ? "Cancel" : "+ New engagement"}
@@ -115,7 +116,12 @@ export default function EngagementsPage() {
       {engagements && engagements.length > 0 && (
         <div className="stat-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}>
           {engagements.map((e) => (
-            <Link key={e.id} href={`/engagements/${e.id}`} className="card" style={{ display: "block", color: "inherit", textDecoration: "none", marginBottom: 0 }}>
+            <Link
+              key={e.id}
+              href={`/engagements/${e.id}`}
+              className="card card-link"
+              style={{ display: "block", color: "inherit", textDecoration: "none", marginBottom: 0 }}
+            >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div>
                   <h3 style={{ marginBottom: 3 }}>{e.name}</h3>

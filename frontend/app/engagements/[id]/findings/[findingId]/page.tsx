@@ -13,7 +13,13 @@ import {
   type InvestigationRun,
 } from "@/lib/api";
 import AppShell from "@/components/AppShell";
-import { AlertIcon, SparkleIcon, CheckCircleIcon, ClockIcon, ArrowRightIcon } from "@/components/icons";
+import { AlertIcon, SparkleIcon, CheckCircleIcon, ClockIcon, FileSearchIcon } from "@/components/icons";
+
+const SEVERITY_ICON: Record<string, typeof AlertIcon> = {
+  high: AlertIcon,
+  medium: ClockIcon,
+  low: CheckCircleIcon,
+};
 
 const DISPOSITIONS = [
   { value: "confirmed", label: "Confirmed exception" },
@@ -99,7 +105,7 @@ export default function FindingDetailPage() {
   const latestInvestigation = investigations?.[investigations.length - 1] ?? null;
 
   return (
-    <AppShell title="Finding detail" eyebrow="Review">
+    <AppShell title="Finding detail" eyebrow="Review" icon={<FileSearchIcon size={17} />}>
       {error && (
         <div className="error-banner">
           <AlertIcon size={15} />
@@ -110,16 +116,24 @@ export default function FindingDetailPage() {
       {!finding && !error && <div className="skeleton" style={{ height: 120, marginBottom: 18 }} />}
 
       {finding && (
-        <div className="card">
-          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-            <span className={`badge severity-${finding.severity}`}>{finding.severity}</span>
-            <span className={`badge status-${finding.status}`}>{finding.status.replace(/_/g, " ")}</span>
+        <div className="card" style={{ display: "flex", gap: 16 }}>
+          <div className={`finding-card-icon severity-${finding.severity}`} style={{ marginTop: 1 }}>
+            {(() => {
+              const SeverityIcon = SEVERITY_ICON[finding.severity] ?? AlertIcon;
+              return <SeverityIcon size={18} />;
+            })()}
           </div>
-          <p style={{ fontSize: 14.5, color: "var(--ink-800)" }}>{finding.summary}</p>
-          <p className="muted" style={{ marginBottom: 0 }}>
-            This is a deterministic control result — a candidate requiring human review, not a
-            proven exception.
-          </p>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+              <span className={`badge severity-${finding.severity}`}>{finding.severity}</span>
+              <span className={`badge status-${finding.status}`}>{finding.status.replace(/_/g, " ")}</span>
+            </div>
+            <p style={{ fontSize: 14.5, color: "var(--ink-800)" }}>{finding.summary}</p>
+            <p className="muted" style={{ marginBottom: 0 }}>
+              This is a deterministic control result — a candidate requiring human review, not a
+              proven exception.
+            </p>
+          </div>
         </div>
       )}
 

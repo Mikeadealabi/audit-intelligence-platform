@@ -72,6 +72,14 @@ export function apiPostForm<T>(path: string, formData: FormData): Promise<T> {
   return request<T>(path, { method: "POST", body: formData });
 }
 
+export function apiPut<T>(path: string, body: unknown): Promise<T> {
+  return request<T>(path, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
 export interface Engagement {
   id: string;
   name: string;
@@ -95,10 +103,28 @@ export interface ImportPreviewResponse {
   sample_rows: ImportPreviewRow[];
 }
 
+export interface AutoRunControlResult {
+  control_code: string;
+  status: "completed" | "skipped";
+  finding_count: number | null;
+  skip_reason: string | null;
+}
+
 export interface CommitImportResponse {
   dataset_version_id: string;
   version_number: number;
   row_count: number;
+  auto_run_control_results: AutoRunControlResult[];
+}
+
+export interface ControlConfiguration {
+  control_code: string;
+  control_name: string;
+  description: string;
+  enabled: boolean;
+  parameters: Record<string, unknown>;
+  required_parameters_hint: string[];
+  updated_at: string | null;
 }
 
 export interface ControlRun {
@@ -218,4 +244,87 @@ export interface EngagementReport {
   control_runs: ReportControlRun[];
   findings: ReportFinding[];
   limitations: string[];
+}
+
+export interface FindingsByControl {
+  control_code: string;
+  control_name: string;
+  finding_count: number;
+}
+
+export interface SupplierSummary {
+  supplier_name: string;
+  transaction_count: number;
+  total_amount_by_currency: Record<string, string>;
+  flagged_transaction_count: number;
+}
+
+export interface EngagementAnalytics {
+  dataset_version_id: string | null;
+  dataset_version_number: number | null;
+  findings_by_severity: Record<string, number>;
+  findings_by_status: Record<string, number>;
+  findings_by_control: FindingsByControl[];
+  supplier_summary: SupplierSummary[];
+  supplier_risk_scores: SupplierRisk[];
+}
+
+export interface ExternalRecordBatch {
+  id: string;
+  source_label: string;
+  version_number: number;
+  committed_at: string;
+}
+
+export interface ExternalRecordOut {
+  id: string;
+  source_row_number: number;
+  counterparty_name: string | null;
+  reference: string | null;
+  currency: string | null;
+  amount: string | null;
+  transaction_date: string | null;
+}
+
+export interface CommitExternalImportResponse {
+  external_record_batch_id: string;
+  version_number: number;
+  row_count: number;
+}
+
+export interface ReconciliationRun {
+  id: string;
+  method: string;
+  status: string;
+  matched_count: number;
+  unmatched_transaction_count: number;
+  unmatched_external_count: number;
+  parameters: Record<string, unknown>;
+  started_at: string;
+  finished_at: string | null;
+}
+
+export interface ReconciliationMatch {
+  id: string;
+  match_status: "matched" | "unmatched_transaction" | "unmatched_external";
+  match_basis: string | null;
+  transaction_record: TransactionRecordOut | null;
+  external_record: ExternalRecordOut | null;
+  created_at: string;
+}
+
+export interface SupplierRisk {
+  supplier_name: string;
+  risk_score: number;
+  controls_hit: string[];
+  total_finding_count: number;
+  severity_breakdown: Record<string, number>;
+}
+
+export interface AuditEvent {
+  id: string;
+  event_type: string;
+  actor_email: string | null;
+  payload: Record<string, unknown>;
+  created_at: string;
 }

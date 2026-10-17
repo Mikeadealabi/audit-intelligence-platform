@@ -119,3 +119,32 @@ export function FileSearchIcon({ size, className, style }: IconProps) {
     </svg>
   );
 }
+
+export function BarChartIcon({ size, className, style }: IconProps) {
+  return (
+    <svg {...base(size)} className={className} style={style}>
+      <path d="M4 20V10" />
+      <path d="M11 20V4" />
+      <path d="M18 20v-7" />
+      <path d="M3 20h18" />
+    </svg>
+  );
+}
+
+export function ActivityIcon({ size, className, style }: IconProps) {
+  return (
+    <svg {...base(size)} className={className} style={style}>
+      <path d="M3 12h4l2.5-7 4 14 2.5-7H21" />
+    </svg>
+  );
+}
+
+export function BuildingIcon({ size, className, style }: IconProps) {
+  return (
+    <svg {...base(size)} className={className} style={style}>
+      <rect x="4" y="3" width="11" height="18" rx="1" />
+      <path d="M8 7h3M8 11h3M8 15h3" />
+      <path d="M15 21v-6h4a1 1 0 011 1v5" />
+    </svg>
+  );
+}
