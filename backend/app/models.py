@@ -45,6 +45,26 @@ class TenantMembership(Base):
     created_at: Mapped[datetime] = mapped_column(default=_now)
 
 
+class TenantInvite(Base):
+    __tablename__ = "tenant_invite"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tenant.id"), index=True)
+    email: Mapped[str] = mapped_column(String(255))
+    role: Mapped[str] = mapped_column(String(20))  # "member" | "admin" — the role granted on accept
+    # sha256 hex of a secrets.token_urlsafe(32) token — not bcrypt. A 256-bit
+    # random token needs an indexable exact-match lookup; bcrypt's slow/salted
+    # design is for low-entropy secrets like passwords, not this. See DECISIONS.md.
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    invited_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("app_user.id"))
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+    expires_at: Mapped[datetime] = mapped_column()
+    accepted_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    accepted_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("app_user.id"), nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    revoked_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("app_user.id"), nullable=True)
+
+
 class Engagement(Base):
     __tablename__ = "engagement"
 
@@ -55,6 +75,10 @@ class Engagement(Base):
     status: Mapped[str] = mapped_column(String(20), default="active")
     created_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("app_user.id"))
     created_at: Mapped[datetime] = mapped_column(default=_now)
+    # Set by POST .../purge-data (soft purge: raw file bytes + raw_row redacted,
+    # canonical fields/findings/audit trail untouched). Null until first purged.
+    data_purged_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    data_purged_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("app_user.id"), nullable=True)
 
 
 class SourceFile(Base):
@@ -70,6 +94,9 @@ class SourceFile(Base):
     byte_size: Mapped[int] = mapped_column()
     content_type: Mapped[str] = mapped_column(String(100))
     created_at: Mapped[datetime] = mapped_column(default=_now)
+    # Set by POST .../purge-data when this file's bytes are deleted from storage.
+    # Metadata (filename, hash, size) is kept for provenance even after content_purged_at is set.
+    content_purged_at: Mapped[datetime | None] = mapped_column(nullable=True)
 
 
 class ImportRun(Base):
@@ -265,6 +292,19 @@ class Finding(Base):
     status: Mapped[str] = mapped_column(String(30), default="open")
     summary: Mapped[str] = mapped_column(String(2000))
     evidence_record_ids: Mapped[list] = mapped_column(JSON)
+    # Layered on top of `status` (the disposition) rather than replacing it — see
+    # docs/data-dictionary.md for why disposition stays a single status field for
+    # now. "not_required" until a disposition exists; a disposition always resets
+    # this to "pending_review" (see record_disposition), so re-disposing after a
+    # rejection naturally re-queues it for review.
+    sign_off_status: Mapped[str] = mapped_column(String(20), default="not_required")
+    signed_off_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("app_user.id"), nullable=True)
+    signed_off_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    # Set by record_disposition — who recorded the current status, so sign-off can
+    # enforce a real second person reviewed it. NULL on findings dispositioned
+    # before this column existed; the sign-off enforcement check simply skips
+    # those (documented transitional gap, see DECISIONS.md).
+    disposition_recorded_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("app_user.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=_now)
 
 
@@ -303,6 +343,28 @@ class ControlConfiguration(Base):
     control_code: Mapped[str] = mapped_column(String(100))
     enabled: Mapped[bool] = mapped_column(default=False)
     parameters: Mapped[dict] = mapped_column(JSON, default=dict)
+    updated_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("app_user.id"))
+    updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
+
+
+class EngagementPlan(Base):
+    """Scope, materiality threshold, and risk assessment captured before fieldwork
+    starts — one row per engagement, mirroring ControlConfiguration's per-engagement
+    settings-blob pattern but singular rather than keyed by a code. No enforcement
+    reads this yet (e.g. materiality-aware findings) — this is capture only, the
+    first step toward that documented deferred idea."""
+
+    __tablename__ = "engagement_plan"
+    __table_args__ = (UniqueConstraint("engagement_id", name="uq_engagement_plan_engagement"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tenant.id"), index=True)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("engagement.id"), index=True)
+    materiality_amount: Mapped[Decimal | None] = mapped_column(Numeric(18, 2), nullable=True)
+    materiality_currency: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    scope_notes: Mapped[str | None] = mapped_column(String(4000), nullable=True)
+    risk_assessment: Mapped[str | None] = mapped_column(String(4000), nullable=True)
+    risk_rating: Mapped[str | None] = mapped_column(String(10), nullable=True)  # "low" | "medium" | "high"
     updated_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("app_user.id"))
     updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
 

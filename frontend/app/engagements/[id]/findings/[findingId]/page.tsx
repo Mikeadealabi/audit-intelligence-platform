@@ -41,6 +41,9 @@ export default function FindingDetailPage() {
   const [busy, setBusy] = useState(false);
   const [investigating, setInvestigating] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [signOffComment, setSignOffComment] = useState("");
+  const [signOffError, setSignOffError] = useState<string | null>(null);
+  const [signOffBusy, setSignOffBusy] = useState<"approve" | "reject" | null>(null);
 
   async function load() {
     try {
@@ -102,6 +105,24 @@ export default function FindingDetailPage() {
     }
   }
 
+  async function submitSignOff(decision: "approve" | "reject") {
+    setSignOffError(null);
+    setSignOffBusy(decision);
+    try {
+      await apiPost(`/engagements/${id}/findings/${findingId}/sign-off`, { decision, comment: signOffComment });
+      setSignOffComment("");
+      await load();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 403) {
+        setSignOffError("Only an admin on this tenant can sign off a finding.");
+      } else {
+        setSignOffError(err instanceof ApiError ? err.message : "Could not record sign-off.");
+      }
+    } finally {
+      setSignOffBusy(null);
+    }
+  }
+
   const latestInvestigation = investigations?.[investigations.length - 1] ?? null;
 
   return (
@@ -127,6 +148,9 @@ export default function FindingDetailPage() {
             <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
               <span className={`badge severity-${finding.severity}`}>{finding.severity}</span>
               <span className={`badge status-${finding.status}`}>{finding.status.replace(/_/g, " ")}</span>
+              <span className={`badge signoff-${finding.sign_off_status}`}>
+                {finding.sign_off_status.replace(/_/g, " ")}
+              </span>
             </div>
             <p style={{ fontSize: 14.5, color: "var(--ink-800)" }}>{finding.summary}</p>
             <p className="muted" style={{ marginBottom: 0 }}>
@@ -311,7 +335,14 @@ export default function FindingDetailPage() {
 
       {finding && (
         <div className="card">
-          <h3 style={{ marginBottom: 14 }}>Reviewer disposition</h3>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <h3 style={{ marginBottom: 14 }}>Reviewer disposition</h3>
+            {finding.disposition_recorded_by && (
+              <span className="muted" style={{ fontSize: 12 }}>
+                Prepared by {finding.disposition_recorded_by.slice(0, 8)}
+              </span>
+            )}
+          </div>
           {saved && (
             <div className="info-banner" style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <CheckCircleIcon size={15} /> Saved and recorded in the audit log.
@@ -332,6 +363,60 @@ export default function FindingDetailPage() {
               {busy ? <span className="spinner" /> : null} Save disposition
             </button>
           </form>
+        </div>
+      )}
+
+      {finding && finding.sign_off_status !== "not_required" && (
+        <div className="card">
+          <h3 style={{ marginBottom: 4 }}>Sign-off</h3>
+          <p className="muted" style={{ marginTop: 0 }}>
+            A second-person review of the disposition above. Approving or rejecting is recorded in
+            the audit log.
+          </p>
+
+          {signOffError && (
+            <div className="error-banner">
+              <AlertIcon size={15} />
+              {signOffError}
+            </div>
+          )}
+
+          {finding.sign_off_status === "pending_review" ? (
+            <>
+              <label htmlFor="signoff-comment">Comment (required)</label>
+              <input
+                id="signoff-comment"
+                required
+                minLength={1}
+                value={signOffComment}
+                onChange={(e) => setSignOffComment(e.target.value)}
+              />
+              <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+                <button
+                  className="btn primary"
+                  type="button"
+                  disabled={!signOffComment.trim() || signOffBusy !== null}
+                  onClick={() => submitSignOff("approve")}
+                >
+                  {signOffBusy === "approve" ? <span className="spinner" /> : <CheckCircleIcon size={14} />} Approve
+                </button>
+                <button
+                  className="btn secondary"
+                  type="button"
+                  disabled={!signOffComment.trim() || signOffBusy !== null}
+                  onClick={() => submitSignOff("reject")}
+                >
+                  {signOffBusy === "reject" ? <span className="spinner dark" /> : null} Reject
+                </button>
+              </div>
+            </>
+          ) : (
+            <p style={{ marginBottom: 0 }}>
+              {finding.sign_off_status === "signed_off"
+                ? "Signed off."
+                : "Rejected — re-disposition this finding to send it back for review."}
+            </p>
+          )}
         </div>
       )}
 

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { apiPost, setToken, ApiError } from "@/lib/api";
 import { ShieldIcon, AlertIcon, CheckCircleIcon, LockIcon, FileSearchIcon } from "@/components/icons";
 import ThemeToggle from "@/components/ThemeToggle";
+import AboutModal from "@/components/AboutModal";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function LoginPage() {
   const [tenantName, setTenantName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -60,6 +62,14 @@ export default function LoginPage() {
             <ShieldIcon size={18} />
           </div>
           <strong style={{ fontSize: 16 }}>Audit Intelligence Platform</strong>
+          <button
+            type="button"
+            onClick={() => setShowAbout(true)}
+            className="btn ghost sm"
+            style={{ marginLeft: "auto", color: "var(--ink-200)" }}
+          >
+            About
+          </button>
         </div>
 
         <div style={{ margin: "auto 0", maxWidth: 440 }}>
@@ -168,6 +178,8 @@ export default function LoginPage() {
           </form>
         </div>
       </div>
+
+      {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
     </div>
   );
 }

@@ -139,12 +139,31 @@ export function ActivityIcon({ size, className, style }: IconProps) {
   );
 }
 
+export function CloseIcon({ size, className, style }: IconProps) {
+  return (
+    <svg {...base(size)} className={className} style={style}>
+      <path d="M6 6l12 12M18 6L6 18" />
+    </svg>
+  );
+}
+
 export function BuildingIcon({ size, className, style }: IconProps) {
   return (
     <svg {...base(size)} className={className} style={style}>
       <rect x="4" y="3" width="11" height="18" rx="1" />
       <path d="M8 7h3M8 11h3M8 15h3" />
       <path d="M15 21v-6h4a1 1 0 011 1v5" />
+    </svg>
+  );
+}
+
+export function UsersIcon({ size, className, style }: IconProps) {
+  return (
+    <svg {...base(size)} className={className} style={style}>
+      <circle cx="9" cy="8" r="3.2" />
+      <path d="M3.5 20c0-3.3 2.5-5.8 5.5-5.8s5.5 2.5 5.5 5.8" />
+      <path d="M16 9a2.6 2.6 0 100-5.2" />
+      <path d="M15 14.4c2.4.5 4.2 2.6 4.2 5.6" />
     </svg>
   );
 }

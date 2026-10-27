@@ -264,6 +264,11 @@ export default function FindingsPage() {
                     <div className="finding-card-top">
                       <span className={`badge severity-${f.severity}`}>{f.severity}</span>
                       <span className={`badge status-${f.status}`}>{f.status.replace(/_/g, " ")}</span>
+                      {f.sign_off_status !== "not_required" && (
+                        <span className={`badge signoff-${f.sign_off_status}`}>
+                          {f.sign_off_status.replace(/_/g, " ")}
+                        </span>
+                      )}
                       <span className="muted" style={{ marginLeft: "auto", fontSize: 11.5 }}>
                         {new Date(f.created_at).toLocaleDateString()}
                       </span>

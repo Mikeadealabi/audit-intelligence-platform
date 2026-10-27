@@ -158,9 +158,15 @@ def commit_import(
         )
     ).scalar_one()
 
-    raw_bytes = _storage.read(
-        source_file_storage_key(principal.tenant_id, engagement.id, source_file.id, source_file.original_filename)
-    )
+    try:
+        raw_bytes = _storage.read(
+            source_file_storage_key(principal.tenant_id, engagement.id, source_file.id, source_file.original_filename)
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Stored file is no longer available (engagement data may have been purged); refusing to commit",
+        ) from exc
     if compute_sha256(raw_bytes) != source_file.sha256_hash:
         # The immutability guarantee this platform relies on no longer holds — fail
         # loudly rather than committing data that doesn't match its recorded hash.

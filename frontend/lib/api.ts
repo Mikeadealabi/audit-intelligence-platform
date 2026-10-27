@@ -86,6 +86,53 @@ export interface Engagement {
   client_name: string;
   status: string;
   created_at: string;
+  data_purged_at: string | null;
+  data_purged_by: string | null;
+}
+
+export interface PurgeDataResponse {
+  data_purged_at: string;
+  data_purged_by: string;
+  source_file_count: number;
+  transaction_record_count: number;
+  external_record_count: number;
+  already_purged: boolean;
+}
+
+export type TenantRole = "member" | "admin";
+
+export interface TenantMember {
+  id: string;
+  user_id: string;
+  email: string;
+  role: TenantRole;
+  created_at: string;
+}
+
+export interface TenantInvite {
+  id: string;
+  email: string;
+  role: TenantRole;
+  status: "pending" | "accepted" | "revoked" | "expired";
+  created_at: string;
+  expires_at: string;
+  invited_by: string;
+  accepted_at: string | null;
+}
+
+export interface InviteCreateResponse {
+  id: string;
+  email: string;
+  role: TenantRole;
+  token: string;
+  invite_url: string;
+  expires_at: string;
+}
+
+export interface InvitePreview {
+  email: string;
+  role: TenantRole;
+  tenant_name: string;
 }
 
 export interface ImportPreviewRow {
@@ -137,13 +184,29 @@ export interface ControlRun {
   finished_at: string | null;
 }
 
+export type SignOffStatus = "not_required" | "pending_review" | "signed_off" | "rejected";
+
 export interface Finding {
   id: string;
   severity: string;
   status: string;
   summary: string;
   evidence_record_ids: string[];
+  sign_off_status: SignOffStatus;
+  signed_off_by: string | null;
+  signed_off_at: string | null;
+  disposition_recorded_by: string | null;
   created_at: string;
+}
+
+export interface EngagementPlan {
+  materiality_amount: string | null;
+  materiality_currency: string | null;
+  scope_notes: string | null;
+  risk_assessment: string | null;
+  risk_rating: "low" | "medium" | "high" | null;
+  updated_by: string | null;
+  updated_at: string | null;
 }
 
 export interface TransactionRecordOut {
@@ -240,6 +303,8 @@ export interface EngagementReport {
   engagement_name: string;
   client_name: string;
   generated_at: string;
+  data_purged_at: string | null;
+  data_purged_by: string | null;
   dataset_versions: ReportDatasetVersion[];
   control_runs: ReportControlRun[];
   findings: ReportFinding[];

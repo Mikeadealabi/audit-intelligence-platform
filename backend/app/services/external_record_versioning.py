@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.models import ExternalRecord, ExternalRecordBatch, ImportRun
 from app.services.csv_parser import ParseResult
+from app.services.encryption import encrypt_json
 
 
 def next_external_batch_version_number(db: Session, *, tenant_id: uuid.UUID, engagement_id: uuid.UUID) -> int:
@@ -62,7 +63,7 @@ def commit_external_import_run(
                 currency=row.mapped.get("currency"),
                 amount=row.mapped.get("amount"),
                 transaction_date=row.mapped.get("transaction_date"),
-                raw_row=_json_safe(row.mapped),
+                raw_row=encrypt_json(_json_safe(row.mapped)),
             )
         )
 

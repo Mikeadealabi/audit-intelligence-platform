@@ -9,6 +9,8 @@ import StatCard from "@/components/StatCard";
 import EmptyState from "@/components/EmptyState";
 import BarChart from "@/components/BarChart";
 import ControlAutomationPanel from "@/components/ControlAutomationPanel";
+import EngagementPlanPanel from "@/components/EngagementPlanPanel";
+import DangerZonePanel from "@/components/DangerZonePanel";
 import {
   UploadIcon,
   FileSearchIcon,
@@ -74,6 +76,14 @@ export default function EngagementOverviewPage() {
         </div>
       )}
 
+      {report?.data_purged_at && (
+        <div className="error-banner" style={{ background: "var(--ink-50)", color: "var(--ink-700)", borderColor: "var(--ink-200)" }}>
+          <AlertIcon size={15} />
+          Raw file content and original row data for this engagement were purged on{" "}
+          {new Date(report.data_purged_at).toLocaleString()}.
+        </div>
+      )}
+
       {!report && !error && (
         <div className="stat-grid">
           {[0, 1, 2, 3].map((i) => (
@@ -89,23 +99,27 @@ export default function EngagementOverviewPage() {
               label="Dataset versions"
               value={report.dataset_versions.length}
               icon={<GridIcon size={15} />}
+              tone="blue"
             />
             <StatCard
               label="Control runs"
               value={report.control_runs.length}
               icon={<ShieldIcon size={15} />}
+              tone="violet"
             />
             <StatCard
               label="Open findings"
               value={openCount}
               accent={openCount > 0}
               icon={<ClockIcon size={15} />}
+              tone="amber"
             />
             <StatCard
               label="High severity"
               value={highSeverityCount}
               danger={highSeverityCount > 0}
               icon={<AlertIcon size={15} />}
+              tone="rose"
             />
           </div>
 
@@ -156,6 +170,8 @@ export default function EngagementOverviewPage() {
             </div>
           )}
 
+          <EngagementPlanPanel engagementId={id} />
+
           <div className="card">
             <div className="card-header">
               <h3>Quick actions</h3>
@@ -177,6 +193,12 @@ export default function EngagementOverviewPage() {
           </div>
 
           <ControlAutomationPanel engagementId={id} />
+
+          <DangerZonePanel
+            engagementId={id}
+            engagementName={report.engagement_name}
+            onPurged={(result) => setReport({ ...report, data_purged_at: result.data_purged_at, data_purged_by: result.data_purged_by })}
+          />
 
           <div className="card">
             <div className="card-header">

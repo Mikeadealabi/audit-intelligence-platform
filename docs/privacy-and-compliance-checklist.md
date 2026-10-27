@@ -13,8 +13,15 @@ exists so that gap is explicit and trackable, not to imply progress toward it.
       files (employee names, beneficiary names, etc.) under NDPA 2023/NDPR.
 - [ ] Data minimisation / purpose limitation review of what canonical fields are
       actually necessary vs. convenient.
-- [ ] Retention schedule per data category, and who can trigger deletion (currently
-      **no retention/deletion job exists in code**).
+- [ ] Retention schedule per data category, and who can trigger deletion. An
+      admin-invokable manual purge now exists (`POST /engagements/{id}/purge-data`,
+      2026-10-27 — see `docs/data-dictionary.md` and `DECISIONS.md`): it deletes raw
+      uploaded file bytes and the full original `raw_row` content, while keeping
+      canonical fields, findings, dispositions, sign-offs, and the audit trail
+      intact. **This is a manual tool a firm invokes, not an automated retention
+      schedule** — there is still no auto-expiry/cron job, and no policy engine
+      deciding *when* something should be purged. That policy decision remains
+      unresolved.
 - [ ] Data-subject request process (access/correction/erasure) — not built.
 - [ ] DPIA or equivalent assessment, if the firm's engagement involves higher-risk
       processing.

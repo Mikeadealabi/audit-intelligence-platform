@@ -13,3 +13,7 @@ class FileStorage(ABC):
     @abstractmethod
     def read(self, key: str) -> bytes:
         ...
+
+    @abstractmethod
+    def delete(self, key: str) -> None:
+        """Idempotent: deleting an already-deleted or never-existing key must not raise."""

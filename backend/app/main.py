@@ -1,18 +1,24 @@
 from fastapi import FastAPI
 
+from app.config import settings
+from app.middleware.hsts import HSTSMiddleware
 from app.routers import (
     activity,
     analytics,
     auth,
     control_configurations,
     controls,
+    data_purge,
+    engagement_plan,
     engagements,
     external_imports,
     findings,
     imports,
     investigations,
+    invites,
     reconciliation,
     reports,
+    team,
 )
 
 app = FastAPI(
@@ -25,8 +31,16 @@ app = FastAPI(
     ),
 )
 
+# Opt-in only — must stay off in local dev (plain HTTP). See docs/deployment-runbook.md.
+if settings.enable_hsts:
+    app.add_middleware(HSTSMiddleware)
+
 app.include_router(auth.router)
+app.include_router(team.router)
+app.include_router(invites.router)
 app.include_router(engagements.router)
+app.include_router(engagement_plan.router)
+app.include_router(data_purge.router)
 app.include_router(imports.router)
 app.include_router(external_imports.router)
 app.include_router(reconciliation.router)

@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useParams, useRouter } from "next/navigation";
 import { clearToken } from "@/lib/api";
-import { ShieldIcon, GridIcon, UploadIcon, DocIcon, FileSearchIcon, ActivityIcon, BuildingIcon } from "./icons";
+import { ShieldIcon, GridIcon, UploadIcon, DocIcon, FileSearchIcon, ActivityIcon, BuildingIcon, UsersIcon } from "./icons";
 import ThemeToggle from "./ThemeToggle";
 
 interface AppShellProps {
@@ -45,6 +45,9 @@ export default function AppShell({ title, eyebrow, icon, actions, narrow, childr
         <div className="sidebar-section-label">Workspace</div>
         <Link href="/engagements" className={`sidebar-link ${pathname === "/engagements" ? "active" : ""}`}>
           <GridIcon size={16} /> Engagements
+        </Link>
+        <Link href="/team" className={`sidebar-link ${pathname === "/team" ? "active" : ""}`}>
+          <UsersIcon size={16} /> Team
         </Link>
 
         {engagementId && (

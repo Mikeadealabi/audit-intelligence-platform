@@ -21,6 +21,49 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
 
 
+class InviteCreateRequest(BaseModel):
+    email: EmailStr
+    role: str = Field(pattern="^(member|admin)$")
+
+
+class InviteCreateResponse(BaseModel):
+    id: uuid.UUID
+    email: str
+    role: str
+    token: str  # returned only here, once — never again
+    invite_url: str
+    expires_at: datetime
+
+
+class InviteOut(BaseModel):
+    id: uuid.UUID
+    email: str
+    role: str
+    status: str  # "pending" | "accepted" | "revoked" | "expired"
+    created_at: datetime
+    expires_at: datetime
+    invited_by: uuid.UUID
+    accepted_at: datetime | None
+
+
+class InvitePreview(BaseModel):
+    email: str
+    role: str
+    tenant_name: str
+
+
+class AcceptInviteRequest(BaseModel):
+    password: str = Field(min_length=10, max_length=72)
+
+
+class TenantMemberOut(BaseModel):
+    id: uuid.UUID  # membership id
+    user_id: uuid.UUID
+    email: str
+    role: str
+    created_at: datetime
+
+
 class EngagementCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     client_name: str = Field(min_length=1, max_length=200)
@@ -32,8 +75,23 @@ class EngagementOut(BaseModel):
     client_name: str
     status: str
     created_at: datetime
+    data_purged_at: datetime | None
+    data_purged_by: uuid.UUID | None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class PurgeDataRequest(BaseModel):
+    confirm_engagement_name: str = Field(min_length=1, max_length=200)
+
+
+class PurgeDataResponse(BaseModel):
+    data_purged_at: datetime
+    data_purged_by: uuid.UUID
+    source_file_count: int
+    transaction_record_count: int
+    external_record_count: int
+    already_purged: bool
 
 
 class ColumnMapping(BaseModel):
@@ -85,6 +143,10 @@ class FindingOut(BaseModel):
     status: str
     summary: str
     evidence_record_ids: list[uuid.UUID]
+    sign_off_status: str
+    signed_off_by: uuid.UUID | None
+    signed_off_at: datetime | None
+    disposition_recorded_by: uuid.UUID | None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -117,6 +179,11 @@ class ControlRunOut(BaseModel):
 class DispositionRequest(BaseModel):
     status: str = Field(pattern="^(confirmed|false_positive|needs_more_evidence)$")
     rationale: str = Field(min_length=1, max_length=4000)
+
+
+class SignOffRequest(BaseModel):
+    decision: str = Field(pattern="^(approve|reject)$")
+    comment: str = Field(min_length=1, max_length=2000)
 
 
 class ReportDispositionOut(BaseModel):
@@ -173,6 +240,8 @@ class EngagementReport(BaseModel):
     engagement_name: str
     client_name: str
     generated_at: datetime
+    data_purged_at: datetime | None
+    data_purged_by: uuid.UUID | None
     dataset_versions: list[ReportDatasetVersionOut]
     control_runs: list[ReportControlRunOut]
     findings: list[ReportFindingOut]
@@ -222,6 +291,24 @@ class ControlConfigurationOut(BaseModel):
     enabled: bool
     parameters: dict
     required_parameters_hint: list[str]
+    updated_at: datetime | None
+
+
+class EngagementPlanIn(BaseModel):
+    materiality_amount: Decimal | None = None
+    materiality_currency: str | None = Field(default=None, max_length=10)
+    scope_notes: str | None = Field(default=None, max_length=4000)
+    risk_assessment: str | None = Field(default=None, max_length=4000)
+    risk_rating: str | None = Field(default=None, pattern="^(low|medium|high)$")
+
+
+class EngagementPlanOut(BaseModel):
+    materiality_amount: Decimal | None
+    materiality_currency: str | None
+    scope_notes: str | None
+    risk_assessment: str | None
+    risk_rating: str | None
+    updated_by: uuid.UUID | None
     updated_at: datetime | None
 
 

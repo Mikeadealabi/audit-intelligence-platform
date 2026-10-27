@@ -1,11 +1,16 @@
 from pathlib import Path
 
+from app.services.encryption import decrypt_bytes, encrypt_bytes
 from app.storage.base import FileStorage
 
 
 class LocalFilesystemStorage(FileStorage):
-    """Dev-only adapter. Not web-served, not encrypted at rest beyond whatever the
-    host filesystem provides. Do not point this at a production deployment."""
+    """Dev-only adapter. Not web-served. File bytes are encrypted at rest with
+    app-level Fernet encryption (app/services/encryption.py) before being written,
+    specifically to compensate for this adapter having no infra-level encryption
+    of its own — a production adapter (e.g. S3-compatible) may instead rely on the
+    storage provider's server-side encryption, but this dev adapter cannot assume
+    that. Do not point this at a production deployment regardless."""
 
     def __init__(self, base_dir: str):
         self._base_dir = Path(base_dir).resolve()
@@ -23,10 +28,14 @@ class LocalFilesystemStorage(FileStorage):
         full_path = self._resolve(key)
         full_path.parent.mkdir(parents=True, exist_ok=True)
         with open(full_path, "wb") as f:
-            f.write(data)
+            f.write(encrypt_bytes(data))
         return str(full_path)
 
     def read(self, key: str) -> bytes:
         full_path = self._resolve(key)
         with open(full_path, "rb") as f:
-            return f.read()
+            return decrypt_bytes(f.read())
+
+    def delete(self, key: str) -> None:
+        full_path = self._resolve(key)
+        full_path.unlink(missing_ok=True)

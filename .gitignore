@@ -7,11 +7,13 @@ venv/
 .ruff_cache/
 *.egg-info/
 .env
+DEMO_CREDENTIALS.md
 backend/local_storage/
 node_modules/
 .next/
 frontend/.next/
 frontend/out/
+frontend/.env.local
 *.tsbuildinfo
 *.log
 .DS_Store

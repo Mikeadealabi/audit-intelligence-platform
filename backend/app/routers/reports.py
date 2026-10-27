@@ -163,6 +163,8 @@ def get_engagement_report(
         engagement_name=engagement.name,
         client_name=engagement.client_name,
         generated_at=datetime.now(UTC),
+        data_purged_at=engagement.data_purged_at,
+        data_purged_by=engagement.data_purged_by,
         dataset_versions=report_dataset_versions,
         control_runs=report_control_runs,
         findings=report_findings,

@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.models import DatasetVersion, ImportRun, TransactionRecord
 from app.services.csv_parser import ParseResult
+from app.services.encryption import encrypt_json
 
 
 def compute_sha256(data: bytes) -> str:
@@ -71,7 +72,7 @@ def commit_import_run(
                 tax_category=row.mapped.get("tax_category"),
                 recorded_vat_amount=row.mapped.get("recorded_vat_amount"),
                 recorded_wht_amount=row.mapped.get("recorded_wht_amount"),
-                raw_row=_json_safe(row.mapped),
+                raw_row=encrypt_json(_json_safe(row.mapped)),
             )
         )
 

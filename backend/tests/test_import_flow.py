@@ -2,6 +2,8 @@ import io
 import json
 import uuid
 
+from app.models import TransactionRecord
+
 MAPPING = json.dumps(
     {
         "supplier_name": "Supplier",
@@ -68,6 +70,29 @@ def test_commit_creates_dataset_version_with_only_valid_rows(client, make_princi
     body = commit.json()
     assert body["version_number"] == 1
     assert body["row_count"] == 1  # only the valid row
+
+
+def test_committed_raw_row_is_stored_encrypted(client, make_principal, db):
+    headers, _, _ = make_principal()
+    engagement_id = _create_engagement(client, headers)
+
+    data = _csv_bytes(["Acme,INV-1,NGN,1000.00,2026-01-01"])
+    preview = client.post(
+        f"/engagements/{engagement_id}/imports/preview",
+        files={"file": ("txns.csv", io.BytesIO(data), "text/csv")},
+        data={"column_mapping": MAPPING},
+        headers=headers,
+    ).json()
+    commit = client.post(
+        f"/engagements/{engagement_id}/imports/{preview['import_run_id']}/commit", headers=headers
+    )
+    assert commit.status_code == 200
+
+    record = db.query(TransactionRecord).filter_by(engagement_id=uuid.UUID(engagement_id)).one()
+    assert set(record.raw_row.keys()) == {"_encrypted"}
+    assert "Acme" not in str(record.raw_row)
+    # Canonical typed fields are unaffected by raw_row encryption.
+    assert record.supplier_name == "Acme"
 
 
 def test_commit_twice_returns_conflict(client, make_principal):
